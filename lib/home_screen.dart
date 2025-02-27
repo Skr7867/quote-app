@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import 'package:quote/apiservices/api_services.dart';
 import 'package:quote/model/quote_model.dart';
 
@@ -12,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   QuoteModel? quote;
   bool isLoading = true;
+  String? errorMessage; // 🔹 Add this variable to store errors
 
   @override
   void initState() {
@@ -20,24 +22,36 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchQuote() async {
-    setState(() => isLoading = true);
-    QuoteModel? fetchedQuote = await ApiServices().quoteModel();
     setState(() {
-      quote = fetchedQuote;
-      isLoading = false;
+      isLoading = true;
+      errorMessage = null; // Reset error before fetching
     });
+
+    try {
+      QuoteModel? fetchedQuote = await ApiServices().quoteModel();
+      if (fetchedQuote != null) {
+        setState(() {
+          quote = fetchedQuote;
+        });
+      } else {
+        setState(() {
+          errorMessage = "Error: $errorMessage";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = "Error: ${Response}"; // 🔹 Store error message
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // double screenHeight = MediaQuery.of(context).size.height;
-    // double screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text("Quote"),
-      //   centerTitle: true,
-      //   backgroundColor: Colors.blue,
-      // ),
       body: Container(
         decoration: BoxDecoration(
           image: DecorationImage(
@@ -50,8 +64,17 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Center(
             child: isLoading
                 ? const CircularProgressIndicator()
-                : quote != null
-                    ? Column(
+                : errorMessage != null
+                    ? Text(
+                        errorMessage!, // 🔹 Show error message if fetch fails
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      )
+                    : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
@@ -76,19 +99,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             onPressed: fetchQuote,
                             style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.pink),
-                            child: Text(
+                            child: const Text(
                               "New Quote",
                               style: TextStyle(color: Colors.white),
                             ),
                           ),
                         ],
-                      )
-                    : const Text(
-                        "Failed to load quote",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
                       ),
           ),
         ),
